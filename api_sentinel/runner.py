@@ -1,6 +1,7 @@
 
 """Execute deterministic API contract checks."""
 
+import math
 from dataclasses import dataclass
 from typing import Any
 
@@ -12,6 +13,10 @@ from api_sentinel.json_validator import (
 )
 from api_sentinel.validator import ValidationResult, validate_status
 
+VALID_JSON_TYPES = frozenset(
+    {"string", "number", "integer", "boolean", "null", "array", "object"}
+)
+
 
 @dataclass(frozen=True)
 class ContractReport:
@@ -22,6 +27,42 @@ class ContractReport:
     status_result: ValidationResult | None
     json_results: tuple[JsonValidationResult, ...]
     error: str | None
+
+
+def _validate_contract_definition(
+    expected_status: int,
+    required_fields: dict[str, str],
+    expected_values: dict[str, Any],
+    timeout: float,
+) -> None:
+    """Reject invalid contract definitions before any network request."""
+    validate_status(expected_status, expected_status)
+
+    if type(timeout) not in (int, float):
+        raise TypeError("timeout must be a number")
+
+    if not math.isfinite(timeout) or timeout <= 0:
+        raise ValueError("timeout must be finite and greater than zero")
+
+    if not isinstance(required_fields, dict):
+        raise TypeError("required_fields must be a dictionary")
+
+    if not isinstance(expected_values, dict):
+        raise TypeError("expected_values must be a dictionary")
+
+    for field, expected_type in required_fields.items():
+        if not isinstance(field, str):
+            raise TypeError("Required field names must be strings")
+
+        if not isinstance(expected_type, str):
+            raise TypeError("Expected JSON types must be strings")
+
+        if expected_type not in VALID_JSON_TYPES:
+            raise ValueError(f"Unsupported JSON type: {expected_type}")
+
+    for field in expected_values:
+        if not isinstance(field, str):
+            raise TypeError("Expected value field names must be strings")
 
 
 def check_contract(
@@ -38,14 +79,12 @@ def check_contract(
     if expected_values is None:
         expected_values = {}
 
-    if not isinstance(timeout, int | float) or isinstance(timeout, bool):
-        raise TypeError("timeout must be a number")
-
-    if timeout <= 0:
-        raise ValueError("timeout must be greater than zero")
-
-    # Validate the contract's expected status before making a request.
-    validate_status(expected_status, expected_status)
+    _validate_contract_definition(
+        expected_status,
+        required_fields,
+        expected_values,
+        timeout,
+    )
 
     try:
         with httpx.Client(
