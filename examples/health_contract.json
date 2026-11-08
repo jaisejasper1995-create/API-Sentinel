@@ -1,0 +1,12 @@
+
+{
+  "url": "http://127.0.0.1:8000/health",
+  "expected_status": 200,
+  "required_fields": {
+    "status": "string"
+  },
+  "expected_values": {
+    "status": "ok"
+  },
+  "timeout": 2.0
+}
