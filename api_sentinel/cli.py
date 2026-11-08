@@ -2,7 +2,9 @@
 """Command-line interface for API Sentinel."""
 
 import argparse
+import json
 import sys
+from dataclasses import asdict
 
 from api_sentinel.runner import check_contract
 
@@ -44,6 +46,13 @@ def main(argv=None) -> int:
         help="Request timeout in seconds.",
     )
 
+    check_parser.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format: text (default) or json.",
+    )
+
     args = parser.parse_args(argv)
 
     try:
@@ -55,6 +64,16 @@ def main(argv=None) -> int:
     except (TypeError, ValueError) as exc:
         print(f"INVALID CONTRACT: {exc}", file=sys.stderr)
         return 2
+
+    if args.format == "json":
+        print(
+            json.dumps(
+                asdict(report),
+                sort_keys=True,
+                allow_nan=False,
+            )
+        )
+        return 0 if report.passed else 1
 
     if report.passed:
         print(f"PASS | {report.url}")
