@@ -8,3 +8,15 @@ __pycache__/
 .env
 .env.*
 !.env.example
+
+# Local Python environments
+.venv/
+venv/
+
+# Python packaging artifacts
+*.egg-info/
+build/
+dist/
+
+.venv_release_test/
+.venv_wheel_test/
